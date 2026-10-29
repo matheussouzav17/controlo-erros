@@ -37,7 +37,8 @@ Tudo gratuito. Faz-se uma única vez, em cerca de 20 minutos.
 
 1. Crie conta em <https://supabase.com> → **New project** (escolha a região *Europe*; guarde a palavra-passe da base de dados).
 2. No menu lateral, **SQL Editor** → **New query** → cole o conteúdo de [`schema.sql`](schema.sql) → **Run**.
-3. **Project Settings → API**: copie o **Project URL** e a chave **`service_role`** (secreta: nunca a partilhe nem a coloque no código).
+3. **Project Settings → API Keys**: copie o **Project URL** e a chave secreta — chama-se **Secret key** (`sb_secret_…`)
+   nos projetos novos, ou **`service_role`** nos antigos. Nunca a partilhe nem a coloque no código.
 
 ### 2.2 GitHub (guardar o código)
 

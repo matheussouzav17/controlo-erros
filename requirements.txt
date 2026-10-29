@@ -4,3 +4,4 @@ plotly
 supabase
 openpyxl
 pytest
+tzdata

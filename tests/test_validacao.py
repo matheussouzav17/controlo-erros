@@ -64,3 +64,17 @@ def test_vazios_do_pandas_viram_none():
 
     r = validar(registo(produto=float("nan"), observacao=pd.NA, quantidade=pd.NA))
     assert r["produto"] is None and r["observacao"] is None and r["quantidade"] is None
+
+
+@pytest.mark.parametrize("campo", ["numero_encomenda", "operador"])
+def test_texto_obrigatorio_nan_rejeitado(campo):
+    with pytest.raises(ErroValidacao):
+        validar(registo(**{campo: float("nan")}))
+
+
+@pytest.mark.parametrize("campo", ["data", "hora_picking"])
+def test_data_hora_nat_rejeitada(campo):
+    import pandas as pd
+
+    with pytest.raises(ErroValidacao):
+        validar(registo(**{campo: pd.NaT}))

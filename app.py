@@ -1,13 +1,14 @@
 """Controlo de Erros de Encomendas — interface Streamlit."""
 
-from datetime import date, datetime, timedelta
+from datetime import timedelta
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 import analise
-from db import obter_repo
+from db import SqliteRepo, obter_repo
+from horario import agora_local
 from validacao import TIPOS_ERRO, ErroValidacao, validar
 
 st.set_page_config(page_title="Controlo de Erros", page_icon="📦", layout="wide")
@@ -33,6 +34,10 @@ def repo():
 
 def login() -> bool:
     senha = SECRETS.get("APP_PASSWORD")
+    if SECRETS.get("SUPABASE_URL") and not senha:
+        # Na nuvem nunca abrir os dados sem palavra-passe.
+        st.error("Falta definir APP_PASSWORD nos secrets do Streamlit. O app está bloqueado até lá.")
+        return False
     if not senha or st.session_state.get("autenticado"):
         return True
     st.title("📦 Controlo de Erros de Encomendas")
@@ -61,10 +66,10 @@ def pagina_registar():
         operadores = []
         st.warning(MSG_SEM_LIGACAO)
 
-    agora = datetime.now().replace(second=0, microsecond=0)
+    agora = agora_local().replace(second=0, microsecond=0, tzinfo=None)
     with st.form("registar"):
         c1, c2 = st.columns(2)
-        data_ = c1.date_input("Data", value=date.today(), format="DD/MM/YYYY", key=f"f_data_{n}")
+        data_ = c1.date_input("Data", value=agora.date(), format="DD/MM/YYYY", key=f"f_data_{n}")
         hora = c2.time_input("Hora do picking", value=agora.time(), step=60, key=f"f_hora_{n}")
         numero = st.text_input("N.º da encomenda *", key=f"f_numero_{n}")
         c1, c2 = st.columns(2)
@@ -114,7 +119,7 @@ def carregar(inicio=None, fim=None) -> pd.DataFrame | None:
 
 def pagina_painel():
     st.header("Painel de erros")
-    hoje = date.today()
+    hoje = agora_local().date()
     with st.sidebar:
         st.subheader("Filtros")
         periodo = st.date_input("Período", value=(hoje - timedelta(days=30), hoje), format="DD/MM/YYYY")
@@ -210,7 +215,7 @@ def pagina_gerir():
                        "tipo_erro": st.column_config.SelectboxColumn("Tipo", options=TIPOS_ERRO, required=True)},
     )
     if st.button("Guardar alterações", type="primary"):
-        alterados = 0
+        alterados, falhou = 0, False
         for posicao in st.session_state[f"editor_{n}"]["edited_rows"]:
             depois = editado.iloc[int(posicao)]
             try:
@@ -218,10 +223,16 @@ def pagina_gerir():
                 alterados += 1
             except ErroValidacao as e:
                 st.error(f"Registo n.º {depois['id']}: {e}")
+                falhou = True
             except Exception:
                 st.error(MSG_SEM_LIGACAO)
+                falhou = True
                 break
-        if alterados:
+        if falhou:
+            # Sem recarregar: os erros ficam visíveis e as edições por corrigir mantêm-se na tabela.
+            if alterados:
+                st.success(f"{alterados} registo(s) atualizado(s); corrija os restantes e guarde de novo.")
+        elif alterados:
             st.session_state["msg_sucesso"] = f"{alterados} registo(s) atualizado(s)."
             st.session_state["gerir_n"] += 1
             st.rerun()
@@ -251,5 +262,7 @@ if login():
     with st.sidebar:
         st.title("📦 Controlo de Erros")
         pagina = st.radio("Menu", ["Registar erro", "Painel", "Gerir registos"], label_visibility="collapsed")
+        if isinstance(repo(), SqliteRepo):
+            st.caption("💾 Modo local: dados guardados em dados.db neste computador.")
         st.divider()
     {"Registar erro": pagina_registar, "Painel": pagina_painel, "Gerir registos": pagina_gerir}[pagina]()

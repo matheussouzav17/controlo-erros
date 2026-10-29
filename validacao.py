@@ -10,7 +10,7 @@ class ErroValidacao(ValueError):
 
 
 def normalizar_operador(nome: str) -> str:
-    return " ".join(str(nome or "").split()).title()
+    return " ".join((_texto_opcional(nome) or "").split()).title()
 
 
 def _vazio(valor) -> bool:
@@ -26,7 +26,7 @@ def _texto_opcional(valor):
 
 
 def validar(dados: dict) -> dict:
-    numero = str(dados.get("numero_encomenda") or "").strip()
+    numero = _texto_opcional(dados.get("numero_encomenda"))
     operador = normalizar_operador(dados.get("operador"))
     tipo = dados.get("tipo_erro")
 
@@ -34,9 +34,9 @@ def validar(dados: dict) -> dict:
         raise ErroValidacao("Indique o número da encomenda.")
     if not operador:
         raise ErroValidacao("Indique o operador de picking.")
-    if dados.get("data") is None:
+    if _vazio(dados.get("data")):
         raise ErroValidacao("Indique a data.")
-    if dados.get("hora_picking") is None:
+    if _vazio(dados.get("hora_picking")):
         raise ErroValidacao("Indique a hora do picking.")
     if tipo not in TIPOS_ERRO:
         raise ErroValidacao("Escolha o tipo de erro: Troca, Falta ou Excesso.")
