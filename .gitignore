@@ -1,0 +1,6 @@
+dados.db
+.streamlit/secrets.toml
+__pycache__/
+.venv/
+.pytest_cache/
+.superpowers/
