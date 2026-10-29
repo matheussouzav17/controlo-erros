@@ -10,7 +10,9 @@ class ErroValidacao(ValueError):
 
 
 def normalizar_operador(nome: str) -> str:
-    return " ".join((_texto_opcional(nome) or "").split()).title()
+    """Junta espaços; só mexe nas maiúsculas se o nome vier todo em minúsculas ou maiúsculas."""
+    texto = " ".join((_texto_opcional(nome) or "").split())
+    return texto.title() if texto.islower() or texto.isupper() else texto
 
 
 def _vazio(valor) -> bool:

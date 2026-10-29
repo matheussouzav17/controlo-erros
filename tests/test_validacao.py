@@ -22,7 +22,7 @@ def registo(**alteracoes):
 
 def test_normaliza_operador():
     assert normalizar_operador("  joão ") == "João"
-    assert normalizar_operador("JOÃO  silva") == "João Silva"
+    assert normalizar_operador("JOÃO  SILVA") == "João Silva"
 
 
 def test_valida_registo_minimo():
@@ -78,3 +78,8 @@ def test_data_hora_nat_rejeitada(campo):
 
     with pytest.raises(ErroValidacao):
         validar(registo(**{campo: pd.NaT}))
+
+
+def test_normaliza_operador_mantem_maiusculas_mistas():
+    assert normalizar_operador("Ana de  Sousa") == "Ana de Sousa"
+    assert normalizar_operador("ana de sousa") == "Ana De Sousa"

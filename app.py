@@ -97,6 +97,7 @@ def pagina_registar():
         st.error(str(e))
         return
     try:
+        repo().adicionar_operador(registo["operador"])  # nome novo passa a constar da lista
         repo().inserir(registo)
     except Exception:
         st.error(MSG_SEM_LIGACAO)

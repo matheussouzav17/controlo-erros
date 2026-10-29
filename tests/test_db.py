@@ -75,3 +75,16 @@ def test_normalizar_df_converte_texto():
 def test_obter_repo_sem_chaves_usa_sqlite(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     assert isinstance(obter_repo({}), SqliteRepo)
+
+
+def test_operadores_inclui_tabela_operador(repo):
+    repo.adicionar_operador("Sara Rebelo")
+    repo.inserir({**REG, "operador": "Ana"})
+    assert repo.operadores() == ["Ana", "Sara Rebelo"]
+
+
+def test_adicionar_operador_sem_duplicados(repo):
+    repo.adicionar_operador("Tiago Pereira")
+    repo.adicionar_operador("tiago pereira")
+    repo.adicionar_operador("  Tiago Pereira ")
+    assert repo.operadores() == ["Tiago Pereira"]

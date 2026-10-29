@@ -7,6 +7,7 @@ from typing import Mapping
 import pandas as pd
 
 TABELA = "erros_encomendas"
+TABELA_OPERADOR = "operador"
 COLUNAS = [
     "id", "data", "numero_encomenda", "operador", "hora_picking",
     "tipo_erro", "produto", "quantidade", "observacao", "criado_em",
@@ -33,7 +34,18 @@ def _normalizar_df(df: pd.DataFrame) -> pd.DataFrame:
     return df.sort_values(["data", "hora_picking"], ascending=False).reset_index(drop=True)
 
 
+def _ordenar(nomes) -> list[str]:
+    return sorted(set(nomes), key=str.casefold)
+
+
 class Repo:
+    def adicionar_operador(self, nome: str) -> None:
+        """Acrescenta o nome à tabela operador, se ainda não existir (sem distinguir maiúsculas)."""
+        nome = " ".join(nome.split())
+        if nome and nome.casefold() not in {o.casefold() for o in self.operadores()}:
+            self._inserir_operador(nome)
+
+    def _inserir_operador(self, nome: str) -> None: ...
     def inserir(self, registo: dict) -> int: ...
     def listar(self, inicio: date | None = None, fim: date | None = None) -> pd.DataFrame: ...
     def atualizar(self, id: int, campos: dict) -> None: ...
@@ -57,6 +69,8 @@ class SqliteRepo(Repo):
                 observacao text,
                 criado_em text not null default current_timestamp
             )""")
+        self.con.execute(f"create table if not exists {TABELA_OPERADOR} "
+                         "(id integer primary key autoincrement, nome text not null)")
         self.con.commit()
 
     def inserir(self, registo: dict) -> int:
@@ -91,8 +105,12 @@ class SqliteRepo(Repo):
         self.con.commit()
 
     def operadores(self) -> list[str]:
-        linhas = self.con.execute(f"select distinct operador from {TABELA} order by operador")
-        return [l[0] for l in linhas]
+        linhas = self.con.execute(f"select operador from {TABELA} union select nome from {TABELA_OPERADOR}")
+        return _ordenar(l[0] for l in linhas)
+
+    def _inserir_operador(self, nome: str) -> None:
+        self.con.execute(f"insert into {TABELA_OPERADOR} (nome) values (?)", [nome])
+        self.con.commit()
 
 
 class SupabaseRepo(Repo):
@@ -105,11 +123,11 @@ class SupabaseRepo(Repo):
         dados = {k: _para_texto(v) for k, v in registo.items()}
         return self.tabela(TABELA).insert(dados).execute().data[0]["id"]
 
-    def _todas(self, colunas: str, inicio=None, fim=None) -> list[dict]:
+    def _todas(self, colunas: str, inicio=None, fim=None, tabela: str = TABELA) -> list[dict]:
         """O Supabase devolve no máximo 1000 linhas por pedido: lê por páginas."""
         linhas, pagina = [], 1000
         while True:
-            consulta = self.tabela(TABELA).select(colunas)
+            consulta = self.tabela(tabela).select(colunas)
             if inicio:
                 consulta = consulta.gte("data", inicio.isoformat())
             if fim:
@@ -130,7 +148,12 @@ class SupabaseRepo(Repo):
         self.tabela(TABELA).delete().eq("id", id).execute()
 
     def operadores(self) -> list[str]:
-        return sorted({l["operador"] for l in self._todas("operador")})
+        usados = (l["operador"] for l in self._todas("operador"))
+        da_tabela = (l["nome"] for l in self._todas("nome", tabela=TABELA_OPERADOR))
+        return _ordenar([*usados, *da_tabela])
+
+    def _inserir_operador(self, nome: str) -> None:
+        self.tabela(TABELA_OPERADOR).insert({"nome": nome}).execute()
 
 
 def obter_repo(secrets: Mapping) -> Repo:

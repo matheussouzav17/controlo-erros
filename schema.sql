@@ -14,3 +14,10 @@ create table if not exists erros_encomendas (
 
 -- Bloqueia o acesso público; o app usa a chave service_role (guardada só nos secrets).
 alter table erros_encomendas enable row level security;
+
+-- Lista de operadores de picking (aparece no formulário do app)
+create table if not exists operador (
+  id bigint generated always as identity primary key,
+  nome text not null
+);
+alter table operador enable row level security;
