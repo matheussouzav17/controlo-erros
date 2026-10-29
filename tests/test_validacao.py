@@ -57,3 +57,10 @@ def test_tipo_invalido():
 def test_quantidade_nao_positiva(q):
     with pytest.raises(ErroValidacao):
         validar(registo(quantidade=q))
+
+
+def test_vazios_do_pandas_viram_none():
+    import pandas as pd
+
+    r = validar(registo(produto=float("nan"), observacao=pd.NA, quantidade=pd.NA))
+    assert r["produto"] is None and r["observacao"] is None and r["quantidade"] is None

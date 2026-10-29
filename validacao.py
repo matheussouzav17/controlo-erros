@@ -1,5 +1,7 @@
 """Normalização e validação de um registo de erro de encomenda."""
 
+import pandas as pd
+
 TIPOS_ERRO = ["Troca", "Falta", "Excesso"]
 
 
@@ -11,8 +13,13 @@ def normalizar_operador(nome: str) -> str:
     return " ".join(str(nome or "").split()).title()
 
 
+def _vazio(valor) -> bool:
+    """None, NaN e pd.NA (vindos da tabela editável) contam como vazios."""
+    return valor is None or (pd.api.types.is_scalar(valor) and bool(pd.isna(valor)))
+
+
 def _texto_opcional(valor):
-    if valor is None:
+    if _vazio(valor):
         return None
     texto = str(valor).strip()
     return texto or None
@@ -35,7 +42,7 @@ def validar(dados: dict) -> dict:
         raise ErroValidacao("Escolha o tipo de erro: Troca, Falta ou Excesso.")
 
     quantidade = dados.get("quantidade")
-    if quantidade is not None and quantidade == quantidade:  # ignora NaN
+    if not _vazio(quantidade):
         quantidade = int(quantidade)
         if quantidade < 1:
             raise ErroValidacao("A quantidade tem de ser maior que zero.")
